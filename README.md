@@ -2,6 +2,8 @@ DarkInferno is a package for computing the temperature profile of the Earth's in
 
 DarkInferno consists of two scripts. One, darkinfernoradius.py, computes the steady-state temperature profile for given values of the dark matter mass and dark matter-nucleon scattering cross section, and returns the radius out to which the inner core is melted. The other, darkinfernotimedependent.py, computes the temperature profile as a function of time, assuming a uniform initial temperature. It then outputs the temperature at 400 km, as a function of time, as a list.
 
+DarkInferno makes use of the ASTERIA python package for modeling dark matter capture in the Earth.
+
 This repository contains both scripts, as well as a jupyter notebook demonstrating their usage. Two brief examples are shown below:
 
 
