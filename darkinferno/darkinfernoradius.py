@@ -31,6 +31,8 @@ innerradius=400000
 mdm=10**float(sys.argv[1])*GeV
 sigma=10**float(sys.argv[2])
 
+print("mdm = "+str(mdm/GeV)+", sigma = "+str(sigma))
+
 ####################
 #setting up asteria capture package
 REARTHasteria=6.38*10**6
@@ -73,7 +75,7 @@ while iter<10:
         else:
             return Tboundary
 
-    print(splicedtempprofile(innerradius))
+#    print(splicedtempprofile(innerradius))
     Tcore=(Tcore+splicedtempprofile(innerradius/100000))/2
 
 def rootfunc(r):
@@ -84,4 +86,4 @@ else:
     root=root_scalar(rootfunc,bracket=[1,1200000],method='brentq').root
 
 with open('parameterscan.txt', 'a') as f:
-    f.write(" "+str(root))
+    f.write(str(sys.argv[1])+" "+str(sys.argv[2])+" "+str(root)+"\n")
