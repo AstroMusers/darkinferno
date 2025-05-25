@@ -21,6 +21,6 @@ python darkinfernotimedependent.py 3 5 5500 100
 ```
 
 
-# Acknowledgement
+# Acknowledgements
 
 The development of DarkInferno has been supported by the McDonnell Center for Space Sciences at Washington University in St. Louis.
