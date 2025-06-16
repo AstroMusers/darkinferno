@@ -1,4 +1,9 @@
-# Introduction
+# darkinferno
+
+[![arXiv](https://img.shields.io/badge/arXiv-2505.24070-b31b1b.svg)](https://arxiv.org/pdf/2505.24070)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15530200.svg)](https://doi.org/10.5281/zenodo.15530200)
+
+
 DarkInferno is a package for computing the temperature profile within the core of rocky planets, including the Earth, due to heating from the annihilation of captured dark matter.
 
 `DarkInferno` provides two scripts. `darkinfernoradius.py` computes the steady-state temperature profile for given values of the dark matter mass and dark matter-nucleon scattering cross section, and returns the radial distance to which the inner core is melted. `darkinfernotimedependent.py` computes the temperature profile as a function of time, assuming a uniform initial temperature. It then outputs the temperature at 400 km, as a function of time, as a list. The framework uses [ASTERIA](https://zenodo.org/records/8150110) to model dark matter capture in the Earth.
