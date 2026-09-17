@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+
+# Generated simulation output
+parameterscan.txt
+temperaturearray.txt
+timehistogram5tw.txt
+*-steady.jsonl
+*-time.json
+results/

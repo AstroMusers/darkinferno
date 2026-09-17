@@ -1,102 +1,205 @@
 #!/usr/bin/python
 
-import numpy as np
-import scipy
-import sys
-import matplotlib.pyplot as plt
+import argparse
+import json
+import math
+from pathlib import Path
+from tdpy import narrate, write_text
 
-year=3.15*10**7
-G = 6.67*10**(-11)
-rho = 13
-kB = 1.38*10**(-23)
-GeV = 1.78*10**(-27)
+from scenarios import SCENARIOS, get_scenario
 
-resfactor=10.0
-kfactor=1.0
-distancetomatchtime=2.0*kfactor
-dt=resfactor**2*10.0*year/distancetomatchtime
-dr=resfactor*400.0
 
-endtime=4500000000*year
+def positive_float(value):
+    """Parse a positive floating-point argument."""
 
-mdm=10**float(sys.argv[1])*GeV
-heatflow=float(sys.argv[2])*1000000000000.0
-t0=float(sys.argv[3])
-k0=float(sys.argv[4])
-if k0>100:
-    dt=dt*100/k0
-alpha0=24*10**(-6)
-rhoc=100/alpha0
-alpha0=k0/rhoc
-print("k = "+str(k0)+", T0 = "+str(t0))
+    number = float(value)
+    if not math.isfinite(number) or number <= 0:
+        raise argparse.ArgumentTypeError("must be greater than zero")
+    return number
 
-def k(temp):
-    return k0
 
-def scaleradiussqr(temp):
-    return 1/(G*(4/3)*np.pi*(rho*1000)*mdm/(kB*temp)/2)
+def finite_float(value):
+    """Parse a finite floating-point argument."""
 
-def n(r,temp):
-    return np.exp(-r**2/scaleradiussqr(temp))
+    number = float(value)
+    if not math.isfinite(number):
+        raise argparse.ArgumentTypeError("must be finite")
+    return number
 
-def qnormalization(temp):
-    return 4*np.pi*np.sqrt(np.pi/2)/(8*(1/scaleradiussqr(temp)**(3/2)))
 
-def q(r,temp):
-    return heatflow*n(r,temp)**2/qnormalization(temp)
+def positive_integer(value):
+    """Parse a positive integer argument."""
 
-def testnormalization(r,temp):
-    return q(r,temp)*4*np.pi*r**2
+    try:
+        number = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("must be an integer") from error
+    if number <= 0:
+        raise argparse.ArgumentTypeError("must be greater than zero")
+    return number
 
-# this factor encodes the latent heat
-def cfactor(t):
-    width=500
-    return 247000/(np.sqrt(2*np.pi)*width)*np.exp(-(t-10000)**2/(2*width**2))
-    return 0
 
-yeararray=[]
-temperaturearray=[]
+def parse_args():
+    """Parse time-dependent command-line arguments."""
 
-ualltime=np.full(int(1200000/dr),t0)
-radii=[dr*i for i in range(len(ualltime))]
-for i in range(int(endtime/dt)):
-    if ualltime[int(400000/dr)]>10000:
-        print("Finished")
-        print("Temperature at 400 km exceeds 10000 K after "+str(i*dt/year)+" years")
-        with open("timehistogram5tw.txt","a") as outfile:
-            outfile.write(str(i*dt/year)+"\n")
-        break
-    radialarray=[]
-    temparray=ualltime
-    for j in range(int(1200000/dr)-1):
-        r=(j+1)*dr
-        if j==0:
-            endpoint=temparray[j]
-        else:
-            endpoint=temparray[j-1]
+    parser = argparse.ArgumentParser(
+        description="Evolve a planetary thermal domain under dark matter heating."
+    )
+    parser.add_argument(
+        "log10_dark_matter_mass",
+        type=finite_float,
+        help="base-10 logarithm of the dark matter mass in GeV",
+    )
+    parser.add_argument("heat_flow", type=positive_float, help="heat injection in TW")
+    parser.add_argument(
+        "initial_temperature", type=positive_float, help="initial temperature in K"
+    )
+    parser.add_argument(
+        "conductivity", type=positive_float, help="thermal conductivity in W m^-1 K^-1"
+    )
+    parser.add_argument(
+        "--scenario",
+        choices=sorted(SCENARIOS),
+        default="earth-inner-core",
+        help="body and thermal scenario (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--end-time-years",
+        type=positive_float,
+        default=4.5e9,
+        help="maximum evolution time in years (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--time-step-years",
+        type=positive_float,
+        default=1e6,
+        help="implicit-solver timestep in years (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--radial-cells",
+        type=positive_integer,
+        default=300,
+        help="number of radial grid cells (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--sample-every",
+        type=positive_integer,
+        default=10,
+        help="record every N timesteps (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--latent-width-k",
+        type=positive_float,
+        default=50.0,
+        help="Gaussian latent-heat smoothing width in K (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--output", type=Path, help="write the structured result to this JSON file"
+    )
+    parser.add_argument(
+        "--typeverb",
+        type=int,
+        choices=(0, 1, 2),
+        default=1,
+        help="narration level: 0 critical, 1 nominal, 2 verbose (default: %(default)s)",
+    )
+    arguments = parser.parse_args()
 
-        testfactor=2
-        tnew=temparray[j]+1/((rhoc + rho*1000*cfactor(temparray[j]))*r**2)*(dt/dr)*((r**2*(k(temparray[j])-k(endpoint))/(dr) + 2*r*k(temparray[j]))*(temparray[j+1]-temparray[j]) + k(temparray[j])*r**2*(temparray[j+1]-2*temparray[j]+endpoint)/dr) + q(r,min(10000,temparray[0]))*dt/(rhoc + rho*1000*cfactor(temparray[j]))
+    return arguments
 
-        radialarray.append(tnew)
-    radialarray.append(t0)
-    ualltime=radialarray
 
-    if i % 1000==0:
-        yeararray.append(i*dt/year)
-        temperaturearray.append(ualltime[int(400000/dr)])
-        print(i*dt/year)
+args = parse_args()
 
-yeararrayold=[]
-dtold=5.0**2*10.0*year/(2.0*1.0)
-for i in range(int(1000000000*year/dtold)):
-    if i % 1000==0:
-        yeararrayold.append(i*dtold/year)
+from physics import (
+    GEV_IN_KG,
+    dark_matter_scale_radius,
+    evolve_temperature,
+    gaussian_enclosed_fraction,
+)
 
-with open("temperaturearray.txt","a") as outfile:
-    for i in range(len(temperaturearray)):
-        outfile.write(str(i*dt/year)+" ")
-    outfile.write("\n")
-    for temp in temperaturearray:
-        outfile.write(str(temp)+" ")
-    outfile.write("\n") 
+scenario = get_scenario(args.scenario)
+mdm = 10**args.log10_dark_matter_mass * GEV_IN_KG  # [kg]
+heatflow = args.heat_flow * 1e12  # [W]
+t0 = args.initial_temperature  # [K]
+k0 = args.conductivity  # [W m^-1 K^-1]
+initial_scale_radius = dark_matter_scale_radius(t0, scenario.density_kg_m3, mdm)  # [m]
+initial_enclosed_fraction = gaussian_enclosed_fraction(
+    scenario.thermal_radius_m, initial_scale_radius
+)
+narrate(args.typeverb, f"Preparing scenario {scenario.name}...")
+narrate(args.typeverb, f"  Total deposited power = {heatflow:g} W", level=2)
+narrate(args.typeverb, f"  Initial temperature = {t0:g} K", level=2)
+narrate(args.typeverb, "Evolving the temperature profile...")
+
+result = evolve_temperature(
+    scenario,
+    mdm,
+    heatflow,
+    t0,
+    k0,
+    args.end_time_years,
+    args.time_step_years,
+    radial_cells=args.radial_cells,
+    sample_every=args.sample_every,
+    typeverb=args.typeverb,
+    latent_width_k=args.latent_width_k,
+)
+narrate(args.typeverb, "Thermal evolution complete.")
+
+if result.phase_crossing_years is None:
+    print("The diagnostic radius did not reach the melting temperature.")
+else:
+    print(
+        f"Temperature at {scenario.diagnostic_radius_m / 1000.0} km reaches "
+        f"{scenario.phase_temperature_k} K after {result.phase_crossing_years} years"
+    )
+print(f"Final phase-proxy exceedance radius is {result.final_phase_radius_m} meters")
+print(
+    f"Initial deposited-power fraction inside thermal domain = {initial_enclosed_fraction:.6g}"
+)
+if initial_enclosed_fraction < 0.9:
+    print(
+        "Warning: less than 90% of the Gaussian source lies inside the thermal domain."
+    )
+for warning in scenario.warnings:
+    print(f"warning: {warning}")
+
+record = {
+    "scenario": scenario.name,
+    "body": scenario.body_name,
+    "log10_dark_matter_mass_gev": args.log10_dark_matter_mass,
+    "heat_flow_tw": args.heat_flow,
+    "total_deposited_power_w": heatflow,
+    "initial_thermal_domain_power_fraction": initial_enclosed_fraction,
+    "initial_thermal_domain_deposited_power_w": initial_enclosed_fraction * heatflow,
+    "initial_temperature_k": t0,
+    "conductivity_w_m_k": k0,
+    "phase_temperature_k": scenario.phase_temperature_k,
+    "diagnostic_radius_m": scenario.diagnostic_radius_m,
+    "phase_crossing_years": result.phase_crossing_years,
+    "final_phase_radius_m": result.final_phase_radius_m,
+    "final_central_temperature_k": result.final_central_temperature_k,
+    "radial_step_m": result.radial_step_m,
+    "time_step_years": result.time_step_years,
+    "latent_width_k": args.latent_width_k,
+    "sample_years": result.sample_years,
+    "diagnostic_temperatures_k": result.diagnostic_temperatures_k,
+    "provenance": scenario.provenance,
+    "warnings": scenario.warnings,
+}
+
+if args.output:
+    write_text(args.output, json.dumps(record, indent=2) + "\n")
+elif scenario.name == "earth-inner-core":
+    if result.phase_crossing_years is not None:
+        write_text("timehistogram5tw.txt", f"{result.phase_crossing_years}\n", "a")
+    output_text = (
+        " ".join(str(value) for value in result.sample_years)
+        + "\n"
+        + " ".join(str(value) for value in result.diagnostic_temperatures_k)
+        + "\n"
+    )
+    write_text("temperaturearray.txt", output_text, "a")
+else:
+    write_text(f"{scenario.name}-time.json", json.dumps(record, indent=2) + "\n")
+narrate(args.typeverb, "Time-dependent calculation complete.")

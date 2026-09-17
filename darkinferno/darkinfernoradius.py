@@ -1,89 +1,183 @@
 #!/usr/bin/python
 
-# This script uses Asteria to compute the dark matter capture rate in Earth, then solves the spherical heat equation for an isothermal dark matter profile to compute the radius out to which the core reaches 10000 K
+# Use ASTERIA capture to solve the spherical heat equation for phase-proxy exceedance.
 # The solution assumes the system is in steady state
-# Because the dark matter distribution depends on the temperature of the Earth, this script iterates the solution 10 times, solving for the temperature profile assuming a baseline fiducial dark matter distribution, then updating the dark matter distribution and solving again
+# Iterate because the dark-matter distribution depends on the body's temperature.
+
+import argparse
+import json
+import math
+from pathlib import Path
+from tdpy import narrate, write_text
+
+from scenarios import SCENARIOS, get_scenario
+
+
+def finite_float(value):
+    """Parse a finite floating-point argument."""
+
+    number = float(value)
+    if not math.isfinite(number):
+        raise argparse.ArgumentTypeError("must be finite")
+    return number
+
+
+def positive_float(value):
+    """Parse a positive floating-point argument."""
+
+    number = finite_float(value)
+    if number <= 0:
+        raise argparse.ArgumentTypeError("must be greater than zero")
+    return number
+
+
+def fraction(value):
+    """Parse a fraction in the interval (0, 1]."""
+
+    number = finite_float(value)
+    if not 0 < number <= 1:
+        raise argparse.ArgumentTypeError("must be greater than zero and at most one")
+    return number
+
+
+def parse_args():
+    """Parse steady-state command-line arguments."""
+
+    parser = argparse.ArgumentParser(
+        description="Estimate phase-boundary heating from captured dark matter."
+    )
+    parser.add_argument(
+        "log10_dark_matter_mass",
+        type=finite_float,
+        help="base-10 logarithm of the dark matter mass in GeV",
+    )
+    parser.add_argument(
+        "log10_cross_section",
+        type=finite_float,
+        help="base-10 logarithm of the dark matter-nucleon cross section in cm^2",
+    )
+    parser.add_argument(
+        "--scenario",
+        choices=sorted(SCENARIOS),
+        default="earth-inner-core",
+        help="body and thermal scenario (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--halo-density",
+        type=positive_float,
+        default=0.4,
+        help="dark-matter halo density in GeV cm^-3 (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--halo-speed",
+        type=positive_float,
+        default=270000.0,
+        help="dark-matter halo speed in m s^-1 (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--deposition-efficiency",
+        type=fraction,
+        default=1.0,
+        help="fraction of annihilation energy deposited as heat (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--output", type=Path, help="append a structured result to this JSON Lines file"
+    )
+    parser.add_argument(
+        "--typeverb",
+        type=int,
+        choices=(0, 1, 2),
+        default=1,
+        help="narration level: 0 critical, 1 nominal, 2 verbose (default: %(default)s)",
+    )
+    arguments = parser.parse_args()
+
+    return arguments
+
+
+args = parse_args()
 
 import asteria
-import sys
-import numpy as np
-import scipy
-from sympy.solvers import solve
-from sympy import Symbol
-from scipy.optimize import root_scalar
+from physics import (
+    GEV_IN_JOULE,
+    GEV_IN_KG,
+    gaussian_enclosed_fraction,
+    solve_steady_state,
+)
 
-G=6.67*10**-11
-kgperm3=1000
-rho=13*kgperm3
-k=100
-Tboundary=5500
-Tcore=5500
-kB=1.38*10**-23
-GeV=1.78*10**-27
-joule=1.602*10**-10#in GeV
+scenario = get_scenario(args.scenario)
+mdm_gev = 10**args.log10_dark_matter_mass  # [GeV]
+mdm = mdm_gev * GEV_IN_KG  # [kg]
+sigma = 10**args.log10_cross_section  # [cm^2]
 
-# inner core-outer core boundary
-icradius=1200000
-# radius within which Earth's core might actually be molten
-innerradius=400000
+narrate(args.typeverb, f"Preparing scenario {scenario.name}...")
+narrate(args.typeverb, f"  Dark-matter mass = {mdm_gev:g} GeV", level=2)
+narrate(args.typeverb, f"  Scattering cross section = {sigma:g} cm^2", level=2)
 
-# command line args: DM mass in GeV and heat injection (mass capture rate, assuming equilibrium) in terawatts
-mdm=10**float(sys.argv[1])*GeV
-sigma=10**float(sys.argv[2])
+narrate(args.typeverb, "Calculating the dark-matter capture rate with ASTERIA...")
+mnucasteria = 0.94  # [GeV]
+asteria.set_elements(scenario.asteria_elements)
+capturerate = asteria.multicapture(
+    scenario.radius_m,
+    scenario.mass_kg,
+    args.halo_density,
+    args.halo_speed,
+    mnucasteria,
+    sigma,
+    mdm_gev,
+)  # [s^-1]
 
-print("mdm = "+str(mdm/GeV)+", sigma = "+str(sigma))
+heatflow = (
+    float(capturerate) * mdm_gev * GEV_IN_JOULE * args.deposition_efficiency
+)  # [W]
+narrate(args.typeverb, f"Capture calculation complete: {heatflow:g} W deposited.")
 
-####################
-#setting up asteria capture package
-REARTHasteria=6.38*10**6
-MEARTHasteria=5.97*10**24
-rhodmasteria=0.4
-vasteria=270000
-mnucasteria=0.94
-asteria.set_elements([[0.32,55.8],[0.29,16],[0.15,24],[0.14,28],[0.017,40],[0.015,27]])
-captureasteria=np.vectorize(asteria.multicapture)
-capturerate=captureasteria(REARTHasteria,MEARTHasteria,rhodmasteria,vasteria,mnucasteria,sigma,mdm/GeV)
+narrate(args.typeverb, "Solving the steady-state heat equation...")
+result = solve_steady_state(scenario, mdm, heatflow)
+enclosed_fraction = gaussian_enclosed_fraction(
+    scenario.thermal_radius_m, result.scale_radius_m
+)
+print(f"Phase-proxy exceedance radius = {result.phase_radius_m:g} m")
+print(f"Deposited-power fraction inside thermal domain = {enclosed_fraction:.6g}")
+if enclosed_fraction < 0.9:
+    print(
+        "Warning: less than 90% of the Gaussian source lies inside the thermal domain."
+    )
+for warning in scenario.warnings:
+    print(f"Warning: {warning}")
 
-masscapturerate=capturerate*mdm/GeV*joule
-heatflow=masscapturerate
-print("mass-energy capture rate is "+str(heatflow)+" watts")
+record = {
+    "scenario": scenario.name,
+    "body": scenario.body_name,
+    "log10_dark_matter_mass_gev": args.log10_dark_matter_mass,
+    "log10_cross_section_cm2": args.log10_cross_section,
+    "halo_density_gev_cm3": args.halo_density,
+    "halo_speed_m_s": args.halo_speed,
+    "deposition_efficiency": args.deposition_efficiency,
+    "capture_rate_s-1": float(capturerate),
+    "heat_flow_w": heatflow,
+    "total_deposited_power_w": heatflow,
+    "thermal_domain_power_fraction": enclosed_fraction,
+    "thermal_domain_deposited_power_w": enclosed_fraction * heatflow,
+    "central_temperature_k": result.central_temperature_k,
+    "diagnostic_temperature_k": result.diagnostic_temperature_k,
+    "phase_temperature_k": scenario.phase_temperature_k,
+    "phase_radius_m": result.phase_radius_m,
+    "scale_radius_m": result.scale_radius_m,
+    "assumes_capture_annihilation_equilibrium": True,
+    "models_evaporation": False,
+    "provenance": scenario.provenance,
+    "warnings": scenario.warnings,
+}
 
-#done with Asteria section
-####################
-
-iter=1
-while iter<10:
-    iter+=1
-    rx=np.sqrt(3*kB*Tcore/(2*np.pi*G*rho*mdm))
-
-    def densityintegrand(x):
-        return np.exp(-x**2/rx**2)**2*4*np.pi*x**2
-    densitynormalization=scipy.integrate.quad(densityintegrand,0,5*rx)[0]/heatflow
-
-    def tempprofile(x,const):
-        return np.sqrt(2*np.pi)*rx**3 * scipy.special.erf(np.sqrt(2)*x/rx)/(16*densitynormalization*k*x) + const
-
-    c=Symbol('c')
-    constant=float(solve(tempprofile(icradius,c)-Tboundary,c)[0])
-
-    def truetempprofile(x):
-        return tempprofile(x,constant)
-
-    def splicedtempprofile(x):
-        if x<icradius:
-            return truetempprofile(x)
-        else:
-            return Tboundary
-
-#    print(splicedtempprofile(innerradius))
-    Tcore=(Tcore+splicedtempprofile(innerradius/100000))/2
-
-def rootfunc(r):
-    return truetempprofile(r)-10000
-if truetempprofile(1)<10000:
-    root=1
+if args.output or scenario.name != "earth-inner-core":
+    output_path = args.output or Path(f"{scenario.name}-steady.jsonl")
+    output_text = json.dumps(record) + "\n"
 else:
-    root=root_scalar(rootfunc,bracket=[1,1200000],method='brentq').root
-
-with open('parameterscan.txt', 'a') as f:
-    f.write(str(sys.argv[1])+" "+str(sys.argv[2])+" "+str(root)+"\n")
+    output_path = Path("parameterscan.txt")
+    output_text = (
+        f"{args.log10_dark_matter_mass} {args.log10_cross_section} "
+        f"{result.phase_radius_m}\n"
+    )
+write_text(output_path, output_text, "a")
+narrate(args.typeverb, "Steady-state calculation complete.")
