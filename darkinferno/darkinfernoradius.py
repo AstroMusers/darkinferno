@@ -1,43 +1,23 @@
 #!/usr/bin/python
 
-# Use ASTERIA capture to solve the spherical heat equation for phase-proxy exceedance.
+# Use Gordion capture to solve the spherical heat equation for phase-proxy exceedance.
 # The solution assumes the system is in steady state
 # Iterate because the dark-matter distribution depends on the body's temperature.
 
 import argparse
 import json
-import math
 from pathlib import Path
-from tdpy import narrate, write_text
 
+try:
+    from tdpy import narrate, write_text
+    from tdpy.verbosity import print
+except ImportError:
+    narrate = None
+    write_text = None
+
+from argument_types import finite_float, fraction, positive_float
+from capture import gordion_capture_rate_s
 from scenarios import SCENARIOS, get_scenario
-
-
-def finite_float(value):
-    """Parse a finite floating-point argument."""
-
-    number = float(value)
-    if not math.isfinite(number):
-        raise argparse.ArgumentTypeError("must be finite")
-    return number
-
-
-def positive_float(value):
-    """Parse a positive floating-point argument."""
-
-    number = finite_float(value)
-    if number <= 0:
-        raise argparse.ArgumentTypeError("must be greater than zero")
-    return number
-
-
-def fraction(value):
-    """Parse a fraction in the interval (0, 1]."""
-
-    number = finite_float(value)
-    if not 0 < number <= 1:
-        raise argparse.ArgumentTypeError("must be greater than zero and at most one")
-    return number
 
 
 def parse_args():
@@ -97,7 +77,6 @@ def parse_args():
 
 args = parse_args()
 
-import asteria
 from physics import (
     GEV_IN_JOULE,
     GEV_IN_KG,
@@ -114,17 +93,13 @@ narrate(args.typeverb, f"Preparing scenario {scenario.name}...")
 narrate(args.typeverb, f"  Dark-matter mass = {mdm_gev:g} GeV", level=2)
 narrate(args.typeverb, f"  Scattering cross section = {sigma:g} cm^2", level=2)
 
-narrate(args.typeverb, "Calculating the dark-matter capture rate with ASTERIA...")
-mnucasteria = 0.94  # [GeV]
-asteria.set_elements(scenario.asteria_elements)
-capturerate = asteria.multicapture(
-    scenario.radius_m,
-    scenario.mass_kg,
+narrate(args.typeverb, "Calculating the dark-matter capture rate with Gordion...")
+capturerate = gordion_capture_rate_s(
+    scenario,
+    mdm_gev,
+    sigma,
     args.halo_density,
     args.halo_speed,
-    mnucasteria,
-    sigma,
-    mdm_gev,
 )  # [s^-1]
 
 heatflow = (

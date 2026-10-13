@@ -4,39 +4,16 @@ import argparse
 import json
 import math
 from pathlib import Path
-from tdpy import narrate, write_text
 
+try:
+    from tdpy import narrate, write_text
+    from tdpy.verbosity import print
+except ImportError:
+    narrate = None
+    write_text = None
+
+from argument_types import finite_float, positive_float, positive_integer
 from scenarios import SCENARIOS, get_scenario
-
-
-def positive_float(value):
-    """Parse a positive floating-point argument."""
-
-    number = float(value)
-    if not math.isfinite(number) or number <= 0:
-        raise argparse.ArgumentTypeError("must be greater than zero")
-    return number
-
-
-def finite_float(value):
-    """Parse a finite floating-point argument."""
-
-    number = float(value)
-    if not math.isfinite(number):
-        raise argparse.ArgumentTypeError("must be finite")
-    return number
-
-
-def positive_integer(value):
-    """Parse a positive integer argument."""
-
-    try:
-        number = int(value)
-    except ValueError as error:
-        raise argparse.ArgumentTypeError("must be an integer") from error
-    if number <= 0:
-        raise argparse.ArgumentTypeError("must be greater than zero")
-    return number
 
 
 def parse_args():

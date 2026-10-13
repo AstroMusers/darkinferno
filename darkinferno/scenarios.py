@@ -61,17 +61,15 @@ class BodyScenario:
             raise ValueError("element mass fractions cannot sum to more than one")
 
     @property
-    def asteria_elements(self):
-        """Return the composition in ASTERIA's input format."""
+    def capture_composition(self):
+        """Return mass fractions and nuclear masses for capture models."""
 
-        elements = [
-            [element.mass_fraction, element.atomic_mass] for element in self.elements
-        ]
-
-        return elements
+        return tuple(
+            (element.mass_fraction, element.atomic_mass) for element in self.elements
+        )
 
 
-# ASTERIA Earth composition: https://doi.org/10.5281/zenodo.8150110
+# Earth bulk composition used by the Asteria v1.0 reference model.
 EARTH_ELEMENTS = tuple(
     Element(*values)
     for values in (
@@ -127,9 +125,9 @@ MARS_PROXY_ELEMENTS = tuple(
 COMMON_MOON_WARNINGS = (
     "The 1754 K boundary temperature is an imposed benchmark, not a temperature "
     "evaluated at the 240 km model boundary from a radial lunar geotherm.",
-    "Lunar capture uses ASTERIA below the escape-velocity range used to calibrate "
-    "its reflection fit.",
-    "ASTERIA assumes homogeneous whole-body composition and does not model "
+    "Lunar capture lies below the escape-velocity range used to calibrate Gordion's "
+    "reflection fit.",
+    "Gordion assumes homogeneous whole-body composition and does not model "
     "dark-matter evaporation.",
     "Capture-annihilation equilibrium and complete local energy deposition are assumed.",
     "The lunar elemental abundances are a bulk-silicate proxy, not a validated "
@@ -203,7 +201,7 @@ SCENARIOS = {
         warnings=(
             "The 6230 K melting temperature is a pure-iron ICB estimate with a reported "
             "500 K uncertainty; light elements lower the alloy melting temperature.",
-            "The ASTERIA composition models 93.2% of Earth's mass and omits minor elements.",
+            "The capture composition models 93.2% of Earth's mass and omits minor elements.",
         ),
     ),
     # Elemental-iron melting point: https://doi.org/10.1201/9781315380476
@@ -245,7 +243,7 @@ SCENARIOS = {
             "not used to claim Martian melting.",
             "The elemental abundances are a whole-body proxy and are not a validated "
             "radial Martian composition.",
-            "ASTERIA assumes homogeneous whole-body composition and does not model "
+            "Gordion assumes homogeneous whole-body composition and does not model "
             "dark-matter evaporation.",
             "Capture-annihilation equilibrium and complete local energy deposition are assumed.",
         ),

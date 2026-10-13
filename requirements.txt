@@ -1,5 +1,6 @@
-asteria
+gordion @ git+https://github.com/tansudaylan/gordion.git@14535a146c6323ebecada15416ef09cbe786b0d8
 matplotlib
 numpy
 scipy
 tdpy
+pcat @ git+https://github.com/tansudaylan/pcat.git

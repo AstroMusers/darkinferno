@@ -20,9 +20,9 @@ import numpy as np
 from darkinferno.constraints import (
     ParticleHeatingModel,
     annihilation_cross_section_for_equilibrium_cm3_s,
-    asteria_capture_rate_s,
     cross_section_boundary_cm2,
     earth_core_drift_ceiling_cm2,
+    gordion_capture_rate_s,
     logarithmic_capture_slope,
     minimum_deposition_efficiency,
 )
@@ -162,7 +162,7 @@ def main():
             )
         )
         drift_ceiling_cm2 = earth_core_drift_ceiling_cm2(mass_gev)
-        capture_rate_s = asteria_capture_rate_s(
+        capture_rate_s = gordion_capture_rate_s(
             scenario,
             mass_gev,
             drift_ceiling_cm2,

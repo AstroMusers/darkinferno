@@ -1,5 +1,6 @@
 __pycache__/
 *.py[cod]
+.DS_Store
 
 # Generated simulation output
 parameterscan.txt
@@ -8,3 +9,5 @@ timehistogram5tw.txt
 *-steady.jsonl
 *-time.json
 results/
+/data/
+/visuals/

@@ -3,6 +3,7 @@ import math
 
 import scipy.optimize
 
+from darkinferno.capture import gordion_capture_rate_s
 from darkinferno.physics import (
     GEV_IN_JOULE,
     GEV_IN_KG,
@@ -150,44 +151,13 @@ def earth_core_drift_ceiling_cm2(dark_matter_mass_gev):
     return 2.5e-23 * dark_matter_mass_gev
 
 
-def asteria_capture_rate_s(
-    scenario,
-    dark_matter_mass_gev,
-    cross_section_cm2,
-    halo_density_gev_cm3=0.4,
-    halo_speed_m_s=270_000.0,
-):
-    """Calculate capture with ASTERIA's spin-independent nucleon convention."""
-
-    try:
-        import asteria
-    except ImportError as error:
-        raise ImportError(
-            "ASTERIA is required for particle constraints; install it or add its "
-            "module directory to PYTHONPATH"
-        ) from error
-
-    asteria.set_elements(scenario.asteria_elements)
-    return float(
-        asteria.multicapture(
-            scenario.radius_m,
-            scenario.mass_kg,
-            halo_density_gev_cm3,
-            halo_speed_m_s,
-            0.94,
-            cross_section_cm2,
-            dark_matter_mass_gev,
-        )
-    )
-
-
 def logarithmic_capture_slope(
     scenario,
     dark_matter_mass_gev,
     cross_section_cm2,
     model=ParticleHeatingModel(),
     log10_step=0.01,
-    capture_rate_function=asteria_capture_rate_s,
+    capture_rate_function=gordion_capture_rate_s,
 ):
     """Return the local derivative d ln(C) / d ln(sigma)."""
 
@@ -223,7 +193,7 @@ def particle_heating_point(
     cross_section_cm2,
     boundary_radius_m,
     model=ParticleHeatingModel(),
-    capture_rate_function=asteria_capture_rate_s,
+    capture_rate_function=gordion_capture_rate_s,
 ):
     """Map particle parameters to deposited power crossing a radial boundary."""
 
@@ -280,9 +250,13 @@ def cross_section_boundary_cm2(
     power_ceiling_w,
     model=ParticleHeatingModel(),
     log10_cross_section_bounds=(-50.0, -20.0),
-    capture_rate_function=asteria_capture_rate_s,
+    capture_rate_function=gordion_capture_rate_s,
 ):
-    """Solve the lower cross-section boundary where DM reaches a heat ceiling."""
+    """Find the first cross section whose deposited power reaches the ceiling.
+
+    At a discontinuous capture-regime transition, return the first value on the
+    high-power side of the skipped ceiling.
+    """
 
     if power_ceiling_w <= 0:
         raise ValueError("power_ceiling_w must be positive")
@@ -318,5 +292,14 @@ def cross_section_boundary_cm2(
 
     root = scipy.optimize.brentq(residual, *root_bracket, xtol=1e-8)
     if abs(residual(root)) > 1e-5:
-        raise ValueError("capture model is discontinuous at the heat-ceiling crossing")
+        lower_log_cross_section, upper_log_cross_section = root_bracket
+        for _ in range(80):
+            midpoint = 0.5 * (lower_log_cross_section + upper_log_cross_section)
+            if residual(midpoint) >= 0.0:
+                upper_log_cross_section = midpoint
+            else:
+                lower_log_cross_section = midpoint
+        root = upper_log_cross_section
+        if residual(root) < 0.0:
+            raise ValueError("capture model does not reach the heat ceiling")
     return 10.0**root

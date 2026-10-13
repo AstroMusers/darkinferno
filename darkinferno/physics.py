@@ -3,6 +3,7 @@ import math
 
 import numpy as np
 from scipy import linalg, optimize, special
+from tdpy.verbosity import print
 
 
 # CODATA constants: https://physics.nist.gov/cuu/Constants/

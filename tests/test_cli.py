@@ -39,7 +39,7 @@ class CommandLineTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("moon-inner-core", result.stdout)
 
-    def test_radius_rejects_non_finite_input_before_importing_asteria(self):
+    def test_radius_rejects_non_finite_input_before_importing_gordion(self):
         result = self.run_script("darkinfernoradius.py", "nan", "-37")
 
         self.assertEqual(result.returncode, 2)

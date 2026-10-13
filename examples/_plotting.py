@@ -138,8 +138,7 @@ def figure_already_exists(output_directory, stem, typefileplot="png"):
 def save_figure(figure, output_directory, stem, typefileplot="png"):
     """Write a PNG at 300 dpi or a vector PDF."""
 
+    from tdpy.plotting import save_figure as tdpy_save_figure
+
     output_path = figure_path(output_directory, stem, typefileplot)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    print(f"Writing to {output_path}")
-    figure.savefig(output_path, **({"dpi": 300} if typefileplot == "png" else {}))
-    plt.close(figure)
+    tdpy_save_figure(figure, output_path, typefileplot=typefileplot, close_figure=True)
