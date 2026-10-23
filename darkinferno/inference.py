@@ -52,7 +52,11 @@ def radial_temperature_log_likelihood(parameters, state) -> float:
     ) / state["uncertainty_k"]
     if not np.isfinite(residual).all():
         return -np.inf
-    return float(-0.5 * np.sum(residual**2 + np.log(2.0 * np.pi * state["uncertainty_k"] ** 2)))
+    from tdpy.numerics import logpdf_gaus
+
+    return float(np.sum(logpdf_gaus(
+        state["temperature_k"], profile.temperature_k, state["uncertainty_k"]
+    )))
 
 
 def infer_heat_source_power(

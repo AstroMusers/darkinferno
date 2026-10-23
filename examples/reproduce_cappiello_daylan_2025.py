@@ -30,11 +30,12 @@ def parse_arguments(argv=None):
         help="directory for all generated figures and tables",
     )
     parser.add_argument("--typefileplot", choices=("png", "pdf"), default="png")
+    parser.add_argument("--typeplotback", choices=("white", "dark"), default="white")
     parser.add_argument("--typeverb", type=int, choices=(0, 1, 2), default=1)
     return parser.parse_args(argv)
 
 
-def run_results(output_dir, typefileplot="png", typeverb=1):
+def run_results(output_dir, typefileplot="png", typeverb=1, typeplotback="white"):
     """Run every DarkInferno result-producing example with shared output settings."""
 
     output_dir = Path(output_dir)
@@ -48,6 +49,8 @@ def run_results(output_dir, typefileplot="png", typeverb=1):
             str(output_dir),
             "--typefileplot",
             typefileplot,
+            "--typeplotback",
+            typeplotback,
             "--typeverb",
             str(typeverb),
         ]
@@ -58,7 +61,7 @@ def run_results(output_dir, typefileplot="png", typeverb=1):
 
 def main(argv=None):
     arguments = parse_arguments(argv)
-    run_results(arguments.output_dir, arguments.typefileplot, arguments.typeverb)
+    run_results(arguments.output_dir, arguments.typefileplot, arguments.typeverb, arguments.typeplotback)
     return 0
 
 

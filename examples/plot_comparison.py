@@ -53,6 +53,7 @@ def main():
     """Generate nonredundant rocky-body comparison figures."""
 
     args = parse_plot_args("Compare the DarkInferno rocky-body calculations.")
+    configure_plotting(args.typeplotback)
     stems = (
         "01_comparison_phase_radius",
         "02_comparison_spatial_heating",
@@ -69,7 +70,6 @@ def main():
     if all(exists):
         return
     narrate(args.typeverb, "Preparing the rocky-body comparison plots...")
-    configure_plotting()
     # Earth thermal model: https://arxiv.org/abs/2505.24070
     # Lunar core structure: https://doi.org/10.1126/science.1199375
     earth, moon, mars = (
@@ -171,7 +171,7 @@ def main():
                 ),
                 color=color,
                 label=(
-                    f"{label}\n$R/r_\chi$ = {scenario.thermal_radius_m / scale_radius:.2f}; "
+                    f"{label}\n$R/r_\\chi$ = {scenario.thermal_radius_m / scale_radius:.2f}; "
                     f"$f_R$ = {enclosed_fraction:.3f}"
                 ),
             )
@@ -241,7 +241,7 @@ def main():
             args.typefileplot,
             "upper center",
             legend_anchor=(0.5, -0.22),
-            xlabel="DM mass $m_\chi$\n[GeV]",
+            xlabel="DM mass $m_\\chi$\n[GeV]",
             ylabel="Central-proxy onset power\n[W]",
             ylim=(1e6, None),
         )
@@ -425,7 +425,7 @@ def main():
             args.typefileplot,
             "upper center",
             legend_anchor=(0.5, -0.22),
-            xlabel="DM mass $m_\chi$\n[GeV]",
+            xlabel="DM mass $m_\\chi$\n[GeV]",
             ylabel=r"Radial fingerprint $\mathcal{Q}_{0,0.3,0.7}$",
         )
 

@@ -61,10 +61,10 @@ def plot_body_convergence(
     narrate(typeverb, f"Calculating {scenario.body_name} transient convergence...")
     widths_k = np.array((50.0, 100.0, 200.0, 500.0))  # [K]
     configurations = (
-        (180, base_time_step_years, "180 cells, $\Delta t$"),
-        (360, base_time_step_years, "360 cells, $\Delta t$"),
-        (180, base_time_step_years / 2.0, "180 cells, $\Delta t/2$"),
-        (360, base_time_step_years / 2.0, "360 cells, $\Delta t/2$"),
+        (180, base_time_step_years, "180 cells, $\\Delta t$"),
+        (360, base_time_step_years, "360 cells, $\\Delta t$"),
+        (180, base_time_step_years / 2.0, "180 cells, $\\Delta t/2$"),
+        (360, base_time_step_years / 2.0, "360 cells, $\\Delta t/2$"),
     )
 
     figure, axis = single_plot(height_in=5.5)
@@ -96,7 +96,7 @@ def plot_body_convergence(
         typefileplot,
         "upper center",
         legend_anchor=(0.5, -0.2),
-        xlabel="Latent-heat width $\Delta T$ [K]",
+        xlabel="Latent-heat width $\\Delta T$ [K]",
         ylabel="First crossing time [Myr]",
         xlim=(40.0, 620.0),
         xticks=widths_k,
@@ -112,7 +112,7 @@ def main():
     """Generate Earth and lunar transient-convergence figures."""
 
     args = parse_plot_args("Plot DarkInferno transient numerical convergence.")
-    configure_plotting()
+    configure_plotting(args.typeplotback)
     plot_body_convergence(
         get_scenario("earth-inner-core"),
         5e12,

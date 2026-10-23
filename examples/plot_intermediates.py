@@ -2,7 +2,7 @@
 
 from _plotting import (
     EARTH_COLORS,
-    INK,
+    foreground_color,
     MOON_COLORS,
     configure_plotting,
     figure_already_exists,
@@ -111,16 +111,16 @@ def plot_intermediates(
         )
         axis.axhline(
             scenario.diagnostic_radius_m / 1000.0,
-            color=INK,
+            color=foreground_color(),
             linestyle=":",
             linewidth=1.6,
             label="Diagnostic radius",
         )
-        axis.axvline(1e3, color=INK, linewidth=1.0, alpha=0.45, label=r"$m_\chi=1$ TeV")
+        axis.axvline(1e3, color=foreground_color(), linewidth=1.0, alpha=0.45, label=r"$m_\chi=1$ TeV")
         axis.axvspan(
             masses_gev[0],
             valid_mass_gev,
-            color=INK,
+            color=foreground_color(),
             alpha=0.08,
             linewidth=0,
             label=r"$f_R<0.9$",
@@ -157,7 +157,7 @@ def plot_intermediates(
         axis.axvline(
             scale_radius / 1000.0,
             ymax=0.72,
-            color=INK,
+            color=foreground_color(),
             linestyle=":",
             linewidth=1.3,
             label=r"$r_\chi$; 1 TeV",
@@ -258,7 +258,7 @@ def plot_intermediates(
         axis.axvline(
             scenario.phase_temperature_k,
             ymax=0.72,
-            color=INK,
+            color=foreground_color(),
             linestyle="-.",
             linewidth=1.3,
             label=melting_label,
@@ -287,7 +287,7 @@ def plot_intermediates(
         axis.axvline(
             scenario.phase_temperature_k,
             ymax=0.72,
-            color=INK,
+            color=foreground_color(),
             linestyle="-.",
             linewidth=1.3,
             label=melting_label,
@@ -312,7 +312,7 @@ def plot_intermediates(
         axis.axvline(
             scenario.phase_temperature_k,
             ymax=0.72,
-            color=INK,
+            color=foreground_color(),
             linestyle="-.",
             linewidth=1.3,
             label=melting_label,
@@ -338,12 +338,12 @@ def plot_intermediates(
             label=rf"Diffusion number; $\Delta t$ [yr] = {time_step_years:.0e}",
         )
         axis.axhline(
-            1.0, color=INK, linestyle="--", linewidth=1.3, label="Diffusion number = 1"
+            1.0, color=foreground_color(), linestyle="--", linewidth=1.3, label="Diffusion number = 1"
         )
         axis.axvline(
             scenario.phase_temperature_k,
             ymax=0.72,
-            color=INK,
+            color=foreground_color(),
             linestyle="-.",
             linewidth=1.3,
             label=melting_label,
@@ -389,7 +389,7 @@ def plot_intermediates(
         axis.axvline(
             scale_radius / 1000.0,
             ymax=0.72,
-            color=INK,
+            color=foreground_color(),
             linestyle=":",
             linewidth=1.3,
             label=r"$r_\chi$; 1 TeV",
@@ -414,7 +414,7 @@ def main():
     args = parse_plot_args(
         "Plot the major intermediate variables in the DarkInferno calculations."
     )
-    configure_plotting()
+    configure_plotting(args.typeplotback)
     plot_intermediates(
         get_scenario("earth-inner-core"),
         1e12,

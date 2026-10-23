@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from _plotting import (
-    INK,
+    foreground_color,
     MOON_COLORS,
     configure_plotting,
     figure_already_exists,
@@ -24,6 +24,7 @@ def main():
     """Generate lunar steady-state and time-dependent figures."""
 
     args = parse_plot_args("Generate the numbered DarkInferno Moon plots.")
+    configure_plotting(args.typeplotback)
     stems = ("01_moon_steady_temperature_profile", "02_moon_temperature_evolution")
     exists = [
         figure_already_exists(args.output_dir, stem, args.typefileplot)
@@ -32,7 +33,6 @@ def main():
     if all(exists):
         return
     narrate(args.typeverb, "Preparing the Moon heating plots...")
-    configure_plotting()
     # Lunar core structure: https://doi.org/10.1126/science.1199375
     # Elemental-iron melting point: https://doi.org/10.1201/9781315380476
     central = get_scenario("moon-inner-core")
@@ -55,7 +55,7 @@ def main():
             )
         axis.axhline(
             central.phase_temperature_k,
-            color=INK,
+            color=foreground_color(),
             linestyle="--",
             linewidth=1.4,
             label="Iron melting proxy\n(Haynes et al. 2016)",
@@ -112,7 +112,7 @@ def main():
                     evolution.phase_crossing_years / 1e6,
                     central.phase_temperature_k,
                     color=color,
-                    edgecolor=INK,
+                    edgecolor=foreground_color(),
                     linewidth=0.6,
                     s=48,
                     zorder=4,
@@ -121,7 +121,7 @@ def main():
                 crossing_labeled = True
         axis.axhline(
             central.phase_temperature_k,
-            color=INK,
+            color=foreground_color(),
             linestyle="--",
             linewidth=1.4,
             label="Iron melting proxy\n(Haynes et al. 2016)",

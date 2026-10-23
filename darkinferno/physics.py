@@ -282,6 +282,14 @@ def phase_radius(temperature, outer_radius_m, phase_temperature_k):
     return phase_radius_m
 
 
+def _resolve_conductivity(scenario, conductivity_w_m_k):
+    """Select the default only for an omitted, otherwise positive conductivity."""
+    conductivity = scenario.conductivity_w_m_k if conductivity_w_m_k is None else conductivity_w_m_k  # [W m^-1 K^-1]
+    if not math.isfinite(conductivity) or conductivity <= 0:
+        raise ValueError("conductivity must be finite and positive")
+    return conductivity
+
+
 def solve_steady_state(
     scenario, dark_matter_mass_kg, heat_flow_w, iterations=10, conductivity_w_m_k=None
 ):
@@ -291,7 +299,7 @@ def solve_steady_state(
         raise ValueError(
             "heat flow must be nonnegative and iterations must be positive"
         )
-    conductivity = conductivity_w_m_k or scenario.conductivity_w_m_k  # [W m^-1 K^-1]
+    conductivity = _resolve_conductivity(scenario, conductivity_w_m_k)  # [W m^-1 K^-1]
     characteristic_temperature = scenario.boundary_temperature_k  # [K]
     temperature = None
     scale_radius = None
@@ -335,6 +343,15 @@ def steady_temperature_profile(
 ):
     """Calculate a sampled steady-state temperature profile."""
 
+    if np.ma.is_masked(radius_m):
+        raise ValueError("radius_m must not contain masked values")
+    radius = np.asarray(radius_m, dtype=float)  # [m]
+    if radius.ndim != 1:
+        raise ValueError("radius_m must be one-dimensional")
+    if not np.isfinite(radius).all():
+        raise ValueError("radius_m must contain finite values")
+    if np.any(radius < 0) or np.any(radius > scenario.thermal_radius_m):
+        raise ValueError("radius_m must lie within the thermal domain")
     result = solve_steady_state(
         scenario,
         dark_matter_mass_kg,
@@ -342,7 +359,7 @@ def steady_temperature_profile(
         iterations=iterations,
         conductivity_w_m_k=conductivity_w_m_k,
     )
-    conductivity = conductivity_w_m_k or scenario.conductivity_w_m_k  # [W m^-1 K^-1]
+    conductivity = _resolve_conductivity(scenario, conductivity_w_m_k)  # [W m^-1 K^-1]
     temperature = _steady_temperature_function(
         result.scale_radius_m,
         heat_flow_w,
@@ -350,11 +367,6 @@ def steady_temperature_profile(
         scenario.thermal_radius_m,
         scenario.boundary_temperature_k,
     )  # [K callable]
-    radius = np.asarray(radius_m, dtype=float)  # [m]
-    if radius.ndim != 1:
-        raise ValueError("radius_m must be one-dimensional")
-    if np.any(radius < 0) or np.any(radius > scenario.thermal_radius_m):
-        raise ValueError("radius_m must lie within the thermal domain")
     temperatures = np.fromiter(
         (temperature(float(value)) for value in radius), dtype=float, count=radius.size
     )  # [K]

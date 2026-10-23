@@ -12,6 +12,7 @@ if str(REPOSITORY_ROOT) not in sys.path:
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from tdpy import narrate
+from tdpy.plotting import configure_plot_style, plot_background_colors
 
 
 BACKGROUND = "#ffffff"
@@ -46,19 +47,18 @@ def parse_plot_args(description):
         default=1,
         help="narration level: 0 critical, 1 nominal, 2 verbose (default: %(default)s)",
     )
+    parser.add_argument("--typeplotback", choices=("white", "dark"), default="white")
     arguments = parser.parse_args()
 
     return arguments
 
 
-def configure_plotting():
-    """Configure publication-scale plotting on a white background."""
+def configure_plotting(typeplotback="white"):
+    """Configure publication-scale plotting in the requested background theme."""
 
+    configure_plot_style(typeplotback)
     plt.rcParams.update(
         {
-            "figure.facecolor": BACKGROUND,
-            "axes.facecolor": BACKGROUND,
-            "savefig.facecolor": BACKGROUND,
             "text.usetex": False,
             "font.family": "DejaVu Sans",
             "font.size": MAIN_TEXT_SIZE_PT,
@@ -66,22 +66,21 @@ def configure_plotting():
             "xtick.labelsize": MAIN_TEXT_SIZE_PT,
             "ytick.labelsize": MAIN_TEXT_SIZE_PT,
             "legend.fontsize": MAIN_TEXT_SIZE_PT,
-            "axes.labelcolor": INK,
-            "axes.titlecolor": INK,
-            "axes.edgecolor": INK,
-            "xtick.color": INK,
-            "ytick.color": INK,
             "axes.linewidth": 0.8,
             "axes.spines.top": False,
             "axes.spines.right": False,
             "axes.grid": False,
             "legend.frameon": False,
-            "legend.labelcolor": INK,
             "lines.linewidth": 2.3,
             "figure.dpi": 120,
             "savefig.dpi": 300,
         }
     )
+
+
+def foreground_color():
+    """Return the foreground selected for the current plot theme."""
+    return plt.rcParams["text.color"]
 
 
 def single_plot(height_in=PAPER_SINGLE_PLOT_HEIGHT_IN):
@@ -117,6 +116,8 @@ def figure_path(output_directory, stem, typefileplot="png"):
 
     if typefileplot not in {"png", "pdf"}:
         raise ValueError("typefileplot must be 'png' or 'pdf'")
+    if plot_background_colors()[0] == 'black':
+        stem += '_dark'
     output_path = Path(output_directory) / f"{stem}.{typefileplot}"
 
     return output_path

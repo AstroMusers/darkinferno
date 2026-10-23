@@ -25,11 +25,23 @@ The same analysis quantifies an existence condition at the adopted core-drift ce
 
 We provide two scripts. `darkinfernoradius.py` uses Gordion to calculate how many dark-matter particles become gravitationally trapped, then estimates the region where a steady temperature profile exceeds a chosen threshold. `darkinfernotimedependent.py` follows the temperature after a specified heat source is switched on. It uses a numerically stable spherical heat-diffusion solver and includes the energy absorbed during a phase change through an effective heat capacity.
 
-Our existing particle-limit workflow remains a deterministic, model-conditioned boundary, not a likelihood fit to measured thermal data. The profile-fit example below adds a separate posterior estimate from radial-temperature inputs.
+The particle-limit workflow returns a deterministic boundary under its stated assumptions. A separate radial-temperature example estimates source power from temperature measurements.
 
 ## Radial-temperature inference
 
-`darkinferno.inference.infer_heat_source_power()` fits a source-power posterior to radial temperature measurements using the existing steady-state solver. The result is conditional on the selected thermal scenario and dark-matter mass, with a uniform prior in log10 source power and independent Gaussian temperature errors. Run `python examples/infer_heat_source.py --smoke` for a short, explicitly synthetic demonstration. It is not a fit to measured planetary temperatures or a dark-matter constraint.
+`darkinferno.inference.infer_heat_source_power()` fits a source-power posterior to radial temperature measurements using the steady-state solver. The result is conditional on the selected thermal scenario and dark-matter mass, with a uniform prior in log10 source power and independent Gaussian temperature errors. Run `python examples/infer_heat_source.py --smoke` for a short synthetic demonstration using assumed temperatures. These data illustrate the inference procedure and support no dark-matter constraint.
+
+For `solve_steady_state()` and `steady_temperature_profile()`, we select the
+scenario conductivity only when `conductivity_w_m_k=None`. Explicit overrides
+must be finite and positive in $\mathrm{W\,m^{-1}\,K^{-1}}$. A zero override
+raises `ValueError` instead of silently selecting the default. Both APIs share
+the same conductivity selection and validation.
+
+Sampled profiles require a one-dimensional `radius_m` array of finite values
+from zero through the thermal-domain radius, including both endpoints. We reject
+masked coordinates before array conversion and validate radii before solving.
+Valid query order is preserved without sorting or filling coordinates. Empty
+arrays retain the existing empty sampled profile and computed solver summary.
 
 Body properties and thermal assumptions are selected through named scenarios. The Earth model uses a pure-iron melting estimate at the pressure of the inner-core boundary. The lunar model imposes a 57 K gap between its initial temperature and its threshold over a nominal 240 km domain. It is not a self-consistent radial temperature model or a dark-matter detector forecast. Its small domain is deliberately used to reveal when a local-core heating calculation becomes unreliable.
 
@@ -40,6 +52,14 @@ DarkInferno requires Python 3. Install its dependencies from the repository root
 
 ```bash
 python -m pip install -r requirements.txt
+```
+
+## Local paths
+
+Set `DARKINFERNO_PATH` to override the checkout used by our path helper. When it is unset, `paths.py` uses this repository directory. The helper exposes its local `data/` and `visuals/` directories, which Git ignores.
+
+```bash
+export DARKINFERNO_PATH=/path/to/darkinferno
 ```
 
 # Example use
@@ -131,7 +151,12 @@ python examples/plot_intermediates.py
 python examples/plot_convergence.py
 ```
 
-By default, the scripts write to `figures/`. Use `--output-dir PATH` to select another location, or `--typefileplot pdf` to write vector PDFs instead of PNGs. Every output contains exactly one plot. Its two-digit filename prefix gives the order in which its variable of interest is produced within that Earth, Moon, comparison, intermediate-variable, or convergence sequence. Before calculating a plot, each script checks whether that specific output already exists; existing outputs are reported and skipped independently. The Earth and Moon sequences contain steady radial and illustrative time-dependent temperature plots. Their shared threshold response appears only in the comparison sequence. Mars joins the body-independent spatial-heating, finite-domain, radial-fingerprint, and observed-heat-budget figures. The comparison sequence also contrasts Earth's surface and core--mantle radial calorimeters. The scale plots mark where less than 90% of the Gaussian power lies inside the modeled region. The convergence sequence tests the radial grid, time step, and artificial melting interval.
+These figures use white backgrounds with black axes by default. Pass
+`--typeplotback dark` for black backgrounds with white axes. Dark figure names
+have a `_dark` suffix, so existing light figures are not reused or overwritten.
+The full-results launcher forwards the same option to every plotting script.
+
+By default, the scripts write to `figures/`. Use `--output-dir PATH` to select another location, or `--typefileplot pdf` to write vector PDFs instead of PNGs. Every output contains one plot. Its two-digit filename prefix gives the order of that variable within the Earth, Moon, comparison, intermediate-variable, or convergence sequence. Before calculating a plot, each script checks whether that output already exists. Existing outputs are reported and skipped independently. The Earth and Moon sequences contain steady radial and illustrative time-dependent temperature plots. Their shared threshold response appears only in the comparison sequence. Mars joins the body-independent spatial-heating, finite-domain, radial-fingerprint, and observed-heat-budget figures. The comparison sequence also contrasts Earth's surface and core--mantle radial calorimeters. The scale plots mark where less than 90% of the Gaussian power lies inside the modeled region. The convergence sequence tests the radial grid, time step, and artificial melting interval.
 
 All executable scripts accept `--typeverb 0`, `--typeverb 1`, or `--typeverb 2` for critical-only, nominal, or verbose narration. The default is nominal. Verbose thermal evolutions also report regular time-step progress.
 

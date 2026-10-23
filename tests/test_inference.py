@@ -44,6 +44,26 @@ class PCATInferenceTests(unittest.TestCase):
         self.assertGreater(at_truth, away_from_truth)
         self.assertTrue(np.isfinite(at_truth))
 
+    def test_profile_likelihood_preserves_unequal_uncertainty_normalization(self):
+        observed = self.temperature_k + np.array([0.5, -1.0, 2.0, -3.0, 4.0])  # [K]
+        uncertainty = np.array([0.2, 0.5, 1.0, 2.0, 3.0])  # [K]
+        state = {
+            "scenario": self.scenario,
+            "dark_matter_mass_kg": self.mass_gev * GEV_IN_KG,
+            "radius_m": self.radius_m,
+            "temperature_k": observed,
+            "uncertainty_k": uncertainty,
+            "iterations": 10,
+        }
+        residual = (observed - self.temperature_k) / uncertainty
+        expected = -0.5 * np.sum(residual**2 + np.log(2.0 * np.pi * uncertainty**2))
+        actual = radial_temperature_log_likelihood([self.true_log10_power_w], state)
+        self.assertAlmostEqual(actual, expected, places=12)
+
+    def test_profile_likelihood_retains_invalid_power_rejection(self):
+        for log_power in (np.nan, np.inf, 301.0):
+            self.assertEqual(radial_temperature_log_likelihood([log_power], {}), -np.inf)
+
     def test_inference_uses_fixed_chain_sampler_and_returns_power_samples(self):
         fake_pcat = ModuleType("pcat")
         fake_pcat.__path__ = []

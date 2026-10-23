@@ -43,7 +43,7 @@ def main():
     """Generate the Earth radial-calorimetry particle exclusion."""
 
     args = parse_plot_args("Calculate Earth's radial dark-matter constraint.")
-    configure_plotting()
+    configure_plotting(args.typeplotback)
     scenario = get_scenario("earth-inner-core")
     cmb = get_radial_heat_flow_constraint("Earth core-mantle boundary")
     surface = get_heat_flow_constraint("Earth")
@@ -422,7 +422,7 @@ def main():
     axes[2].semilogx(masses_gev, capture_slopes, color=EARTH_COLORS[2])
     axes[2].axhline(1.0, color="#737b82", linestyle=":", linewidth=1.4)
     axes[2].set(
-        xlabel="DM mass $m_\chi$ [GeV]",
+        xlabel="DM mass $m_\\chi$ [GeV]",
         ylabel=r"$d\ln C/d\ln\sigma_{\chi N}$",
         xlim=(5.0, 1e6),
     )

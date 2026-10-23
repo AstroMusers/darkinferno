@@ -2,7 +2,7 @@
 
 from _plotting import (
     EARTH_COLORS,
-    INK,
+    foreground_color,
     configure_plotting,
     figure_already_exists,
     finish_plot,
@@ -24,6 +24,7 @@ def main():
     """Generate Earth steady-state and time-dependent figures."""
 
     args = parse_plot_args("Generate the numbered DarkInferno Earth plots.")
+    configure_plotting(args.typeplotback)
     stems = ("01_earth_steady_temperature_profile", "02_earth_temperature_evolution")
     exists = [
         figure_already_exists(args.output_dir, stem, args.typefileplot)
@@ -32,7 +33,6 @@ def main():
     if all(exists):
         return
     narrate(args.typeverb, "Preparing the Earth heating plots...")
-    configure_plotting()
     # Earth thermal model: https://arxiv.org/abs/2505.24070
     # Pure-iron melting at the inner-core boundary: https://doi.org/10.1126/science.1233514
     scenario = get_scenario("earth-inner-core")
@@ -64,7 +64,7 @@ def main():
                 )
         axis.axhline(
             scenario.phase_temperature_k,
-            color=INK,
+            color=foreground_color(),
             linestyle="--",
             linewidth=1.4,
             label="ICB melting estimate\n(Anzellini et al. 2013)",
@@ -113,7 +113,7 @@ def main():
                     evolution.phase_crossing_years / 1e6,
                     scenario.phase_temperature_k,
                     color=color,
-                    edgecolor=INK,
+                    edgecolor=foreground_color(),
                     linewidth=0.6,
                     s=48,
                     zorder=4,
@@ -122,7 +122,7 @@ def main():
                 crossing_labeled = True
         axis.axhline(
             scenario.phase_temperature_k,
-            color=INK,
+            color=foreground_color(),
             linestyle="--",
             linewidth=1.4,
             label="ICB melting estimate\n(Anzellini et al. 2013)",

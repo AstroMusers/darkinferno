@@ -1,5 +1,7 @@
 import math
 import unittest
+from dataclasses import replace
+from unittest.mock import patch
 
 import numpy as np
 import scipy.integrate
@@ -39,6 +41,34 @@ class ScenarioTests(unittest.TestCase):
 
 
 class SteadyStateTests(unittest.TestCase):
+    def test_conductivity_override_rejects_invalid_values(self):
+        scenario = get_scenario("moon-inner-core")
+        for conductivity in (0.0, -1.0, math.nan, math.inf, -math.inf):  # [W m^-1 K^-1]
+            for solver, extra in ((solve_steady_state, {}), (steady_temperature_profile, {"radius_m": np.array([0.0])})):
+                with self.subTest(conductivity=conductivity, solver=solver.__name__):
+                    with self.assertRaisesRegex(ValueError, "conductivity must be finite and positive"):
+                        solver(scenario, 1e3 * GEV_IN_KG, 1e8, conductivity_w_m_k=conductivity, **extra)
+
+    def test_conductivity_override_preserves_defaults_and_valid_solutions(self):
+        for name in ("earth-inner-core", "moon-inner-core", "mars-core-reference"):
+            scenario = get_scenario(name)
+            with self.subTest(scenario=name, conductivity=None):
+                default = solve_steady_state(scenario, 1e3 * GEV_IN_KG, 1e8)
+                explicit = solve_steady_state(scenario, 1e3 * GEV_IN_KG, 1e8, conductivity_w_m_k=None)
+                self.assertEqual(default, explicit)
+            for conductivity in (10.0, 1000.0):  # [W m^-1 K^-1]
+                with self.subTest(scenario=name, conductivity=conductivity):
+                    override = solve_steady_state(scenario, 1e3 * GEV_IN_KG, 1e8, conductivity_w_m_k=conductivity)
+                    configured = replace(scenario, conductivity_w_m_k=conductivity)
+                    expected = solve_steady_state(configured, 1e3 * GEV_IN_KG, 1e8)
+                    self.assertEqual(override, expected)
+                    radii = np.array([0.0, scenario.diagnostic_radius_m, scenario.thermal_radius_m])  # [m]
+                    profile = steady_temperature_profile(scenario, 1e3 * GEV_IN_KG, 1e8, radii, conductivity_w_m_k=conductivity)
+                    reference = steady_temperature_profile(configured, 1e3 * GEV_IN_KG, 1e8, radii)
+                    self.assertEqual(profile.result, reference.result)
+                    np.testing.assert_array_equal(profile.temperature_k, reference.temperature_k)
+                    np.testing.assert_array_equal(profile.radius_m, reference.radius_m)
+
     def test_mars_reference_benchmarks(self):
         scenario = get_scenario("mars-core-reference")
         containment_mass_gev = containment_transition_mass(
@@ -83,6 +113,37 @@ class SteadyStateTests(unittest.TestCase):
             result.diagnostic_temperature_k, scenario.boundary_temperature_k
         )
         self.assertEqual(result.phase_radius_m, 0.0)
+
+    def test_profile_rejects_invalid_radii_before_solving(self):
+        scenario = get_scenario("moon-inner-core")
+        invalid_radii = (
+            [math.nan], [math.inf], [-math.inf], [-1.0],
+            [scenario.thermal_radius_m + 1.0], 0.0, np.zeros((1, 2)),
+            np.ma.array([0.0, scenario.diagnostic_radius_m], mask=[True, False]),
+            np.ma.masked_all(2), np.ma.masked,
+        )
+        for heat_flow in (0.0, 1e8):  # [W]
+            for radius in invalid_radii:  # [m]
+                with self.subTest(heat_flow=heat_flow, radius=radius):
+                    with patch("darkinferno.physics.solve_steady_state", side_effect=AssertionError("Invalid radii reached solver")) as solver:
+                        with self.assertRaisesRegex(ValueError, "radius_m"):
+                            steady_temperature_profile(scenario, 1e3 * GEV_IN_KG, heat_flow, radius)
+                        solver.assert_not_called()
+
+    def test_profile_preserves_valid_radius_order_containers_and_empty_arrays(self):
+        scenario = get_scenario("moon-inner-core")
+        radii = np.array([scenario.thermal_radius_m, 0.0, scenario.diagnostic_radius_m])  # [m]
+        reference = steady_temperature_profile(scenario, 1e3 * GEV_IN_KG, 1e8, radii)
+        for values in (radii.tolist(), tuple(radii), radii, np.ma.asarray(radii)):
+            with self.subTest(container=type(values).__name__):
+                profile = steady_temperature_profile(scenario, 1e3 * GEV_IN_KG, 1e8, values)
+                np.testing.assert_array_equal(profile.radius_m, radii)
+                np.testing.assert_array_equal(profile.temperature_k, reference.temperature_k)
+                self.assertEqual(profile.result, reference.result)
+        empty = steady_temperature_profile(scenario, 1e3 * GEV_IN_KG, 1e8, np.array([]))
+        self.assertEqual(empty.radius_m.shape, (0,))
+        self.assertEqual(empty.temperature_k.shape, (0,))
+        self.assertEqual(empty.result, reference.result)
 
     def test_profile_matches_steady_state_summary(self):
         scenario = get_scenario("moon-inner-core")
