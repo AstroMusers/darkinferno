@@ -168,11 +168,37 @@ Run the complete DarkInferno results workflow, including its Earth and Moon ther
 python examples/reproduce_cappiello_daylan_2025.py
 ```
 
-The workflow writes figures to `visuals/cappiello_daylan_2025/` by default. The 2025 paper used Asteria for capture. This reproducer uses Gordion, whose implementation is tested against Asteria v1.0 reference capture rates.
+The launcher runs all six current result scripts in a fresh temporary directory.
+After they succeed, it publishes flat, UTC-timestamped figures and tables under
+`examples/visuals/`. Earlier outputs remain unchanged. `--output-dir` selects
+another destination, and `--time-tag YYYYMMDD_HHMMSS` selects a timestamp.
+Existing output names are rejected. A JSON manifest records each output's
+SHA-256 hash, the thermal, Gordion and plotting source hashes, and the Python,
+NumPy, SciPy and Astropy versions. A source change during computation prevents
+publication.
+
+The [2025 paper](https://arxiv.org/html/2505.24070) used Asteria for capture.
+This workflow uses Gordion without importing Asteria. Its current scenarios
+include the 6,230 K iron-melting reference and a CMB heat-budget comparison.
+The paper instead adopted a conservative 10,000 K threshold and a 400 km
+criterion for its exclusion calculation. A figure-by-figure reproduction also
+needs the published heat-flow histories, conductivity and initial-temperature
+scan, and mass-cross-section melting-radius map. The current launcher therefore
+provides the maintained result suite rather than verified numerical agreement
+with every paper figure.
+
+The saved Gordion run includes 32 figures and one particle-boundary table.
+Its [manifest](examples/visuals/cappiello_daylan_2025_20261025_212700_180907.json)
+identifies the exact source files and output hashes.
+
+![Earth temperature at 400 km for four assumed heating powers, with the adopted iron-melting threshold](examples/visuals/02_earth_temperature_evolution_20261025_212700_180907.png)
+
+![Gordion-based particle boundaries under the stated core and surface heat-budget assumptions](examples/visuals/08_earth_particle_constraint_20261025_212700_180907.png)
 
 # Paper
 
-The ApJ manuscript is in `paper/` and uses AASTeX 7. Build instructions and the bibliography are provided alongside `paper/main.tex`.
+The published analysis and figures are available in
+[Can a Dark Inferno Melt Earth's Core?](https://arxiv.org/abs/2505.24070).
 
 # Tests
 

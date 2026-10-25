@@ -60,7 +60,7 @@ def main():
                     color=color,
                     alpha=0.12,
                     linewidth=0,
-                    label="Above proxy at 0.25 TW",
+                    label="Above threshold at 0.25 TW",
                 )
         axis.axhline(
             scenario.phase_temperature_k,
@@ -138,7 +138,6 @@ def main():
             xlabel="Elapsed time [Myr]",
             ylabel="Temperature at $r=400$ km [K]",
             xlim=(0.0, 1000.0),
-            ylim=(3500.0, 10300.0),
         )
         narrate(args.typeverb, "Time-dependent temperature profiles complete.")
 
