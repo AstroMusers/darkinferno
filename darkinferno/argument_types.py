@@ -2,6 +2,26 @@
 
 import argparse
 import math
+from pathlib import Path
+
+
+def add_shared_arguments(parser, scenarios, output_help):
+    """Add DarkInferno options shared by its command-line tools."""
+    parser.add_argument(
+        "--scenario",
+        choices=sorted(scenarios),
+        default="earth-inner-core",
+        help="body and thermal scenario (default: %(default)s)",
+    )
+    parser.add_argument("--output", type=Path, help=output_help)
+    parser.add_argument(
+        "--typeverb",
+        type=int,
+        choices=(0, 1, 2),
+        default=1,
+        help="narration level: 0 critical, 1 nominal, 2 verbose (default: %(default)s)",
+    )
+    return parser
 
 
 def finite_float(value):

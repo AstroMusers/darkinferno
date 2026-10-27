@@ -15,7 +15,7 @@ except ImportError:
     narrate = None
     write_text = None
 
-from argument_types import finite_float, fraction, positive_float
+from argument_types import add_shared_arguments, finite_float, fraction, positive_float
 from capture import gordion_capture_rate_s
 from scenarios import SCENARIOS, get_scenario
 
@@ -36,11 +36,10 @@ def parse_args():
         type=finite_float,
         help="base-10 logarithm of the dark matter-nucleon cross section in cm^2",
     )
-    parser.add_argument(
-        "--scenario",
-        choices=sorted(SCENARIOS),
-        default="earth-inner-core",
-        help="body and thermal scenario (default: %(default)s)",
+    add_shared_arguments(
+        parser,
+        SCENARIOS,
+        "append a structured result to this JSON Lines file",
     )
     parser.add_argument(
         "--halo-density",
@@ -59,16 +58,6 @@ def parse_args():
         type=fraction,
         default=1.0,
         help="fraction of annihilation energy deposited as heat (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--output", type=Path, help="append a structured result to this JSON Lines file"
-    )
-    parser.add_argument(
-        "--typeverb",
-        type=int,
-        choices=(0, 1, 2),
-        default=1,
-        help="narration level: 0 critical, 1 nominal, 2 verbose (default: %(default)s)",
     )
     arguments = parser.parse_args()
 

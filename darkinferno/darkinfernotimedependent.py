@@ -12,7 +12,7 @@ except ImportError:
     narrate = None
     write_text = None
 
-from argument_types import finite_float, positive_float, positive_integer
+from argument_types import add_shared_arguments, finite_float, positive_float, positive_integer
 from scenarios import SCENARIOS, get_scenario
 
 
@@ -34,11 +34,10 @@ def parse_args():
     parser.add_argument(
         "conductivity", type=positive_float, help="thermal conductivity in W m^-1 K^-1"
     )
-    parser.add_argument(
-        "--scenario",
-        choices=sorted(SCENARIOS),
-        default="earth-inner-core",
-        help="body and thermal scenario (default: %(default)s)",
+    add_shared_arguments(
+        parser,
+        SCENARIOS,
+        "write the structured result to this JSON file",
     )
     parser.add_argument(
         "--end-time-years",
@@ -69,16 +68,6 @@ def parse_args():
         type=positive_float,
         default=50.0,
         help="Gaussian latent-heat smoothing width in K (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--output", type=Path, help="write the structured result to this JSON file"
-    )
-    parser.add_argument(
-        "--typeverb",
-        type=int,
-        choices=(0, 1, 2),
-        default=1,
-        help="narration level: 0 critical, 1 nominal, 2 verbose (default: %(default)s)",
     )
     arguments = parser.parse_args()
 

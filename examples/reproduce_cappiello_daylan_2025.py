@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 
+from tdpy.cli import add_plot_arguments
 from tdpy.verbosity import print
 
 
@@ -51,7 +52,7 @@ def parse_arguments(argv=None):
         default=DEFAULT_OUTPUT_DIRECTORY,
         help="directory for all generated figures and tables",
     )
-    parser.add_argument("--typefileplot", choices=("png", "pdf"), default="png")
+    add_plot_arguments(parser)
     parser.add_argument("--typeplotback", choices=("white", "dark"), default="white")
     parser.add_argument("--typeverb", type=int, choices=(0, 1, 2), default=1)
     parser.add_argument("--time-tag", help="output timestamp YYYYMMDD_HHMMSS with optional microseconds")
@@ -77,13 +78,18 @@ def run_results(output_dir, typefileplot="png", typeverb=1, typeplotback="white"
         staging = Path(temporary)
         for script_name in RESULT_SCRIPTS:
             script_path = REPOSITORY_ROOT / "examples" / script_name
-            before = set(staging.iterdir())
+            before = {path: hashlib.sha256(path.read_bytes()).hexdigest()
+                      for path in staging.iterdir() if path.is_file()}
             command = [sys.executable, str(script_path), "--output-dir", str(staging),
                        "--typefileplot", typefileplot, "--typeplotback", typeplotback,
                        "--typeverb", str(typeverb)]
             print(f"Running {script_name}...")
             subprocess.run(command, check=True, cwd=REPOSITORY_ROOT)
-            if not set(staging.iterdir()) - before:
+            after = {path: hashlib.sha256(path.read_bytes()).hexdigest()
+                     for path in staging.iterdir() if path.is_file()}
+            if any(after.get(path) != digest for path, digest in before.items()):
+                raise RuntimeError(f"{script_name} changed earlier staged results; public outputs were left unchanged")
+            if not after.keys() - before.keys():
                 raise RuntimeError(f"{script_name} produced no new result files")
         if source_hashes() != sources:
             raise RuntimeError("Scientific source changed during the run; public outputs were left unchanged")

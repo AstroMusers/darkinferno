@@ -62,6 +62,33 @@ def test_results_failure_preserves_public_outputs(tmp_path, monkeypatch):
     assert old.read_bytes() == b"earlier result"
 
 
+@pytest.mark.parametrize('invalid_output', ['overwrite', 'delete', 'directory_only'])
+def test_results_reject_changed_or_absent_staged_products(tmp_path, monkeypatch, invalid_output):
+    old = tmp_path / 'earlier.png'
+    old.write_bytes(b'earlier result')
+    calls = []
+
+    def write_result(command, **options):
+        calls.append(command)
+        staging = Path(command[command.index('--output-dir') + 1])
+        if invalid_output == 'directory_only':
+            (staging / Path(command[1]).stem).mkdir()
+            return
+        if len(calls) == 2:
+            earlier = staging / 'plot_earth.png'
+            if invalid_output == 'overwrite':
+                earlier.write_bytes(b'replaced scientific result')
+            else:
+                earlier.unlink()
+        (staging / f'{Path(command[1]).stem}.png').write_bytes(b'new result')
+
+    monkeypatch.setattr(example.subprocess, 'run', write_result)
+    with pytest.raises(RuntimeError, match='earlier staged|no new result files'):
+        example.run_results(tmp_path)
+    assert list(tmp_path.iterdir()) == [old]
+    assert old.read_bytes() == b'earlier result'
+
+
 def test_results_timestamp_collision_rejected_before_running(tmp_path, monkeypatch):
     manifest = tmp_path / "cappiello_daylan_2025_20261025_220000.json"
     manifest.write_text("earlier manifest")

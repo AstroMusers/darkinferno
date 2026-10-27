@@ -4,7 +4,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15530200.svg)](https://doi.org/10.5281/zenodo.15530200)
 
 
-Can captured dark matter leave a thermal fingerprint in a planet's core? We explore that question with spherical heat-conduction models for Earth, the Moon, and a Mars reference case. For Earth and the Moon, we calculate where the modeled temperature crosses a chosen threshold. Demonstrating that an actual planetary core melts would require more than that threshold crossing. Mars gives us a reference case for comparing source localization, the response to a finite outer boundary, radial temperature profiles, and heat budgets.
+We model spherical heat conduction in Earth and the Moon under assumed dark-matter heating, with Mars as a reference case. For Earth and the Moon, we calculate where the modeled temperature crosses an adopted threshold. Those crossings depend on source localization and the finite outer boundary. They do not by themselves establish core melting. The Mars case compares the resulting radial profiles and heat budgets at a different planetary scale.
 
 Putting most of the heating source inside the modeled sphere does not mean the temperature has stopped depending on the outer boundary. The relevant ratio is $x=R/r_\chi$, where $R$ is the modeled outer radius and $r_\chi$ is the characteristic width of the dark-matter heating region. Two fractions help us keep those questions separate.
 
@@ -169,6 +169,9 @@ python examples/reproduce_cappiello_daylan_2025.py
 ```
 
 The launcher runs all six current result scripts in a fresh temporary directory.
+Each script must produce a regular output file and leave earlier outputs
+unchanged. If an earlier output changes or disappears, the launcher stops before
+publishing results.
 After they succeed, it publishes flat, UTC-timestamped figures and tables under
 `examples/visuals/`. Earlier outputs remain unchanged. `--output-dir` selects
 another destination, and `--time-tag YYYYMMDD_HHMMSS` selects a timestamp.
